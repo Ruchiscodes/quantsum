@@ -1,0 +1,12 @@
+Set-Content .gitignore @"
+venv/
+__pycache__/
+*.pyc
+data/*
+!data/.gitkeep
+results/phi2-qlora-samsum/
+results/phi2-qlora-adapter/*.safetensors
+.ipynb_checkpoints/
+*.log
+.env
+"@
