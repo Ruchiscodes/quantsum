@@ -48,13 +48,13 @@ LORA_CONFIG = dict(
 TRAIN_CONFIG = dict(
     output_dir="results/phi2-qlora-samsum",
     per_device_train_batch_size=2,
-    gradient_accumulation_steps=8,   # effective batch size = 2 * 8 = 16
-    gradient_checkpointing=True,     # recompute activations on backward pass instead of storing them -> saves memory
+    gradient_accumulation_steps=8,
+    gradient_checkpointing=True,
     num_train_epochs=3,
     learning_rate=2e-4,
-    fp16=False,
-    bf16=True,
+    fp16=True,        # Enable FP16 for T4 GPU hardware acceleration
+    bf16=False,       # T4 does not support native BF16 compute
     logging_steps=25,
     save_strategy="epoch",
-    optim="paged_adamw_8bit",        # memory-efficient optimizer, standard pairing with QLoRA
+    optim="paged_adamw_8bit",
 )
