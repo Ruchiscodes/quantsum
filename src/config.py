@@ -20,10 +20,15 @@ MODEL_NAME = "microsoft/phi-2"
 # This is what shrinks Phi-2's weights from 16-bit to ~4-bit storage,
 # which is where the big memory savings claim comes from.
 # ---------------------------------------------------------------------------
+# T4 (Colab's free GPU) is Turing architecture -> NO native bf16 tensor cores.
+# Using bfloat16 on a T4 falls back to slow emulation and tanks throughput.
+# A100/newer GPUs DO support bf16 natively and should use it.
+_COMPUTE_DTYPE = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_quant_type="nf4",              # NF4 buckets match the real weight distribution better than plain int4
-    bnb_4bit_compute_dtype=torch.bfloat16,  # matmuls still happen in bf16 even though weights are stored in 4-bit
+    bnb_4bit_compute_dtype=_COMPUTE_DTYPE,  # fp16 on T4, bf16 on A100+ -- auto-detected
     bnb_4bit_use_double_quant=True,         # also quantizes the quantization constants -> a bit more savings
 )
 
@@ -47,14 +52,15 @@ LORA_CONFIG = dict(
 # ---------------------------------------------------------------------------
 TRAIN_CONFIG = dict(
     output_dir="results/phi2-qlora-samsum",
-    per_device_train_batch_size=2,
-    gradient_accumulation_steps=8,
-    gradient_checkpointing=True,
+    per_device_train_batch_size=8,   # raised from 2 -- 4-bit Phi-2 + LoRA leaves plenty of T4 headroom
+    gradient_accumulation_steps=2,   # effective batch size = 8 * 2 = 16 (same as before, fewer slow accumulation loops)
+    gradient_checkpointing=True,     # recompute activations on backward pass instead of storing them -> saves memory
     num_train_epochs=3,
     learning_rate=2e-4,
-    fp16=True,        # Enable FP16 for T4 GPU hardware acceleration
-    bf16=False,       # T4 does not support native BF16 compute
+    fp16=not torch.cuda.is_bf16_supported(),  # True on T4
+    bf16=torch.cuda.is_bf16_supported(),      # True on A100+, False on T4
     logging_steps=25,
     save_strategy="epoch",
-    optim="paged_adamw_8bit",
+    optim="paged_adamw_8bit",        # memory-efficient optimizer, standard pairing with QLoRA
+    report_to="none",                # skip wandb/tensorboard overhead unless you want it
 )
