@@ -28,7 +28,7 @@ def load_quantized_model():
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
         quantization_config=bnb_config,
-        device_map="auto",
+        device_map={"": 0},   # force everything onto GPU 0 -- "auto" can silently offload layers to CPU
         trust_remote_code=True,
     )
     # Preps the quantized model so gradients can flow correctly during training
