@@ -61,6 +61,8 @@ TRAIN_CONFIG = dict(
     bf16=torch.cuda.is_bf16_supported(),      # True on A100+, False on T4
     logging_steps=25,
     save_strategy="epoch",
-    optim="paged_adamw_8bit",        # memory-efficient optimizer, standard pairing with QLoRA
+    optim="adamw_8bit",              # regular 8-bit AdamW -- "paged" variant offloads to CPU RAM under memory
+                                      # pressure, which can silently tank speed; not needed once the whole
+                                      # model is forced onto GPU
     report_to="none",                # skip wandb/tensorboard overhead unless you want it
 )
